@@ -1,3 +1,4 @@
+from   argparse import ArgumentParser
 import itertools
 import random
 
@@ -101,9 +102,10 @@ class TownHall:
 
 def make_board():
     return {
-        Place("ship", ["farmer", "boatman", "knight"]),
-        Place("wagon", ["farmer", "trader", "knight"]),
-        Place("guildhall", ["farmer", "craftsman", "knight"]),
+        # FIXME
+        # Place("ship", ["farmer", "boatman", "knight"]),
+        # Place("wagon", ["farmer", "trader", "knight"]),
+        # Place("guildhall", ["farmer", "craftsman", "knight"]),
         Place("castle", ["farmer", "boatman", "trader"]),
         Place("scriptorium", ["knight", "scholar"]),
         TownHall(2),
@@ -358,10 +360,6 @@ class Game:
 
 
 
-def log(msg):
-    print(msg)
-
-
 def phase1(game):
     game.turn = game.turns.pop(0)
     log("turn {}: {}".format(17 - len(game.turns), game.turn))
@@ -501,13 +499,24 @@ def advance_development(game, player, num=1):
         .format(player.number, player.tracks["development"]))
 
 
+def score_deed(deed):
+    # Score 5 if there is exactly one slot to fill for this deed.
+    num_open_slots = sum( not s[1] for s in deed.slots )
+    return (
+        deed.coins 
+        + (5 if num_open_slots == 1 else 2 if num_open_slots == 2 else 0)
+    )
+
+
 def send_to_deeds(game, player, follower):
     deeds = [ d for d in game.deeds if d.has_room(follower.name) ]
     if len(deeds) == 0:
         return False
     else:
         # FIXME: Strategy.
-        deed = random.choice(deeds)
+        # deed = random.choice(deeds)
+        deeds.sort(key=score_deed, reverse=True)
+        deed = deeds[0]
         log("player {} send {} to {}"
             .format(player.number, follower, deed.name))
         deed.fill(follower)
@@ -660,7 +669,6 @@ def turn(game):
     phase2(game)
     phase3(game)
     phase4(game)
-    # log_game(game)
     phase5(game)
     phase6(game)
     phase7(game)
@@ -668,9 +676,35 @@ def turn(game):
 
 
 def main():
-    game = Game(4)
-    while len(game.turns) > 0:
-        turn(game)
+    global log
+
+    parser = ArgumentParser()
+    parser.add_argument(
+        "num_games", metavar="NUM", type=int, nargs="?", default=None,
+        help="show stats for NUM simulated games")
+    args = parser.parse_args()
+
+    if args.num_games is None:
+        def log(msg):
+            print(msg)
+
+        game = Game(4)
+        while len(game.turns) > 0:
+            turn(game)
+
+    else:
+        def log(msg):
+            pass
+
+        scores = []
+        for _ in range(args.num_games):
+            game = Game(4)
+            while len(game.turns) > 0:
+                turn(game)
+            scores.append([ p.points for p in game.players ])
+        print(scores)
+        print("avg max: {}".format(sum( max(s) for s in scores ) / len(scores)))
+        print("avg min: {}".format(sum( min(s) for s in scores ) / len(scores)))
 
 
 if __name__ == "__main__":
