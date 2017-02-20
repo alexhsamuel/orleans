@@ -1,4 +1,5 @@
 from   argparse import ArgumentParser
+import functools
 import itertools
 import random
 
@@ -430,28 +431,52 @@ def can_fill(game, place, player):
     )
 
 
+def weighted_choice(choices, weights):
+    # FIXME: Do this efficiently.
+    weights = functools.reduce(
+        lambda a, b: a + ([b] if a == [] else [a[-1] + b]), weights, [])
+    assert len(weights) == len(choices)
+    r = random.uniform(0, weights[-1])
+    for choice, weight in zip(choices, weights):
+        if r < weight:
+            return choice
+    else:
+        assert False
+
+
+def score_plan(game, player, place, followers):
+    if place.name == "village":
+        return 1
+    else:
+        return 1
+
+
 def plan(game, player):
     while True:
-        try:
-            place, followers = random.choice([
-                (place, f)
-                for place in player.places
-                for f in can_fill(game, place, player)
-            ])
-        except IndexError:
+        places = [
+            (place, f)
+            for place in player.places
+            for f in can_fill(game, place, player)
+        ]
+        if len(places) == 0:
             break
+
+        # place, followers = random.choice(places)
+        place, followers = weighted_choice(
+            places, 
+            [ score_plan(game, player, p, f) for p, f in places ])
+
+        log("planning: player {} places {} in {}"
+            .format(player.number, fmt_set(followers), place.name))
+        if isinstance(place, TownHall):
+            for follower in followers:
+                player.market.remove(follower)
+                place.followers.add(follower)
         else:
-            log("planning: player {} places {} in {}"
-                .format(player.number, fmt_set(followers), place.name))
-            if isinstance(place, TownHall):
-                for follower in followers:
-                    player.market.remove(follower)
-                    place.followers.add(follower)
-            else:
-                for i, follower in zip(range(len(place.followers)), followers):
-                    player.market.remove(follower)
-                    assert place.followers[i] is None
-                    place.followers[i] = follower
+            for i, follower in zip(range(len(place.followers)), followers):
+                player.market.remove(follower)
+                assert place.followers[i] is None
+                place.followers[i] = follower
 
 
 def phase4(game):
