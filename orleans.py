@@ -136,7 +136,7 @@ class Player:
             "brocade": 0,
         }
         self.coins = 5
-        self.citizens = 0
+        self.citizens = set()
         self.tracks = {
             "farmer": 0,
             "boatman": 0,
@@ -177,7 +177,7 @@ class Player:
             + self.goods["yarn"] * 4
             + self.goods["brocade"] * 5
             + (
-                self.citizens
+                len(self.citizens)
                 + 0  # FIXME: stations
             ) * self.status
         )
@@ -190,7 +190,7 @@ class Player:
         yield "market: " + fmt_set(self.market)
         yield "goods: " + fmt_dict(self.goods)
         yield "coins: {}".format(self.coins)
-        yield "citizens: {}".format(self.citizens)
+        yield "citizens: " + fmt_set(self.citizens)
         yield "tracks: " + fmt_dict(self.tracks)
         yield "status: {}".format(self.status)
         yield "tech: {}".format(self.tech)
@@ -532,7 +532,7 @@ def award_citizen(game, player, citizen):
     if citizen in game.citizens:
         log("player {} got citizen {}".format(player.number, citizen))
         game.citizens.remove(citizen)
-        player.citizens += 1
+        player.citizens.add(citizen)
 
 
 def do_action(game, player, place):
